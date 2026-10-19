@@ -1,0 +1,80 @@
+.cl-effect {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  font: inherit;
+}
+
+.cl-effect .cl-stage { position: relative; width: 100%; height: 100%; }
+.cl-effect .cl-words { display: grid; justify-items: center; gap: .5em; margin: 0; padding: 0; list-style: none; }
+.cl-effect .cl-item {
+  font-family: inherit;
+  font-size: var(--cl-font-size, inherit);
+  font-weight: var(--cl-font-weight, 500);
+  line-height: .9;
+  white-space: pre;
+}
+.cl-effect .cl-measure { display: block; width: max-content; margin-inline: auto; }
+.cl-effect .cl-letter { display: none; }
+.cl-effect .cl-axis,
+.cl-effect .cl-pitch,
+.cl-effect .cl-compensation,
+.cl-effect .cl-face,
+.cl-effect .cl-word { display: block; }
+.cl-effect .cl-word { width: max-content; margin-inline: auto; }
+.cl-effect .cl-measurements { pointer-events: none; }
+
+.cl-effect[data-cl-motion="true"] .cl-words {
+  position: absolute;
+  display: block;
+  inset: 0;
+  margin: 0;
+  perspective: var(--cl-perspective, 290px);
+  perspective-origin: center;
+}
+.cl-effect[data-cl-motion="true"] .cl-item {
+  position: absolute;
+  top: calc(50% + var(--cl-center-offset, .0214285714em));
+  left: 0;
+  width: 100%;
+  height: .9em;
+  transform: translate3d(0, -50%, calc(-1 * var(--cl-depth, .52em)));
+  transform-style: preserve-3d;
+}
+.cl-effect[data-cl-motion="true"] .cl-measure {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  visibility: hidden;
+  pointer-events: none;
+}
+.cl-effect[data-cl-motion="true"] .cl-letter {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.cl-effect[data-cl-motion="true"] .cl-axis,
+.cl-effect[data-cl-motion="true"] .cl-pitch,
+.cl-effect[data-cl-motion="true"] .cl-compensation,
+.cl-effect[data-cl-motion="true"] .cl-face {
+  width: 100%;
+  height: 100%;
+  transform-origin: center;
+  transform-style: preserve-3d;
+}
+.cl-effect[data-cl-motion="true"] .cl-face { transform: translateZ(var(--cl-depth, .52em)); }
+.cl-effect[data-cl-motion="true"] .cl-word {
+  position: relative;
+  width: var(--cl-word-width);
+  height: .9em;
+  backface-visibility: hidden;
+  will-change: opacity;
+  opacity: 0;
+}
+.cl-effect[data-cl-motion="true"] .cl-glyph { position: absolute; display: block; left: var(--cl-letter-x, 0px); top: 0; }
+.cl-effect[data-cl-motion="true"] .cl-item:first-child .cl-word { opacity: 1; }

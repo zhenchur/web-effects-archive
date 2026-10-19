@@ -1,0 +1,26 @@
+{
+  "description": "Numeric regression samples captured from the source Cinema 4D scene. CSS axes reverse Y and Z. The C4D evaluator is accurate within 0.2 degrees of the analytic tangent curve.",
+  "modelSha256": "25c2de26e41c647860b1859609ff31dabdc2648a9c57c9316ebeff882113e559",
+  "plane": { "width": 400, "height": 86.77616756322344, "depth": 50, "cameraDistance": 300 },
+  "samples": [
+    { "frame": 0, "pitch": -90, "parentBank": -10, "childBank": 10 },
+    { "frame": 5, "pitch": -88.50240799620933, "parentBank": -9.833600888467704, "childBank": 9.833600888467704 },
+    { "frame": 10, "pitch": -81.59594932942372, "parentBank": -9.066216592158192, "childBank": 9.066216592158192 },
+    { "frame": 15, "pitch": -44.999871253967285, "parentBank": -4.999985694885254, "childBank": 4.999985694885254 },
+    { "frame": 20, "pitch": -8.404050670576297, "parentBank": -0.9337834078418106, "childBank": 0.9337834078418106 },
+    { "frame": 25, "pitch": -1.4975920037906643, "parentBank": -0.16639911153229603, "childBank": 0.16639911153229603 },
+    { "frame": 30, "pitch": 0, "parentBank": 0, "childBank": 0 },
+    { "frame": 35, "pitch": 1.497592003790665, "parentBank": -0.16639911153229608, "childBank": 0.16639911153229608 },
+    { "frame": 40, "pitch": 8.404050670576286, "parentBank": -0.9337834078418096, "childBank": 0.9337834078418096 },
+    { "frame": 45, "pitch": 45.000128746032715, "parentBank": -5.000014305114745, "childBank": 5.000014305114745 },
+    { "frame": 50, "pitch": 81.5959493294237, "parentBank": -9.06621659215819, "childBank": 9.06621659215819 },
+    { "frame": 55, "pitch": 88.50240799620933, "parentBank": -9.833600888467704, "childBank": 9.833600888467704 },
+    { "frame": 60, "pitch": 90, "parentBank": -10, "childBank": 10 }
+  ],
+  "frameZeroWorldMatrix": {
+    "off": [8.682408883346517, -49.2403876506104, 50],
+    "v1": [0.9698463103929541, 0.17101007166283433, 0.17364817766693033],
+    "v2": [0.17364817766693033, -0.984807753012208, -1.2153442308246254e-16],
+    "v3": [0.17101007166283433, 0.03015368960704592, -0.984807753012208]
+  }
+}

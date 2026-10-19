@@ -1,0 +1,6 @@
+node_modules/
+dist/
+qa/
+public/downloads/
+*.log
+.DS_Store

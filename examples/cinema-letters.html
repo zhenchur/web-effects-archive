@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cinema Letters — standalone demo</title>
+<link rel="stylesheet" href="./style.css">
+<style>
+  body { margin:0; padding:24px; color:#111; background:#fafaf8; font:16px Arial,sans-serif; }
+  main { max-width:1100px; margin:auto; }
+  #scene { height:55vh; min-height:250px; font-size:clamp(36px,11vw,140px); }
+  input { width:100%; accent-color:#e35e35; }
+  .cl-effect[data-cl-motion="false"] { height:auto; }
+  @media(prefers-reduced-motion:reduce) { #scene { height:auto; } input { display:none; } }
+</style>
+<main>
+  <div id="scene" aria-label="Cinema Letters"></div>
+  <label for="progress">Прогресс анимации</label>
+  <input id="progress" type="range" min="0" max="1" step="0.001" value="0">
+</main>
+<script type="module">
+  import { createCinemaLetters } from './cinema-letters.js';
+  const effect = createCinemaLetters(document.querySelector('#scene'));
+  document.querySelector('#progress').addEventListener('input', e => effect.setProgress(Number(e.target.value)));
+  window.addEventListener('pagehide', event => { if (!event.persisted) effect.destroy(); });
+</script>
+</html>
