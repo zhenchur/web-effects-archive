@@ -100,8 +100,8 @@ function onAnchorClick(event: MouseEvent) {
 }
 
 function onHashChange() {
-  const target = document.getElementById(location.hash.slice(1));
-  if (target) smoothScroll?.scrollTo(target, { immediate: true });
+  // Back/Forward has already restored native scroll, including an empty hash.
+  smoothScroll?.scrollTo(window.scrollY, { immediate: true });
 }
 
 function measure() {
