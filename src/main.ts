@@ -35,7 +35,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <main class="page-shell">
     <section class="archive-intro" aria-labelledby="archive-title">
       <div><p class="eyebrow">Коллекция веб-экспериментов</p><h1 id="archive-title">Сохраняем движение.</h1></div>
-      <p class="intro-copy">Живые демо и открытые исходники.<br>Чтобы удачный эффект стал началом<br class="desktop-break"> следующего проекта.</p>
+      <p class="intro-copy">Живые демо и открытые исходники. <br>Чтобы удачный эффект стал началом<br class="desktop-break"> следующего проекта.</p>
     </section>
     <div class="workspace">
       <aside class="collection" id="collection" aria-label="Каталог эффектов">
