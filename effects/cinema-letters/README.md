@@ -77,4 +77,3 @@ export function Letters({ progress }: { progress: number }) {
   return <div ref={host} style={{ height: '70svh', fontSize: '10vw' }} />;
 }
 ```
-
