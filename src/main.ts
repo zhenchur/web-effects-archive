@@ -1,3 +1,5 @@
+import Lenis from 'lenis';
+import 'lenis/dist/lenis.css';
 import { effects, repositoryUrl } from './registry';
 import './style.css';
 
@@ -14,7 +16,7 @@ app.innerHTML = `
     <nav class="archive-nav" aria-label="Эффекты">
       ${effects.map(entry => `<a href="#${entry.id}">${entry.title}</a>`).join('')}
     </nav>
-    <div class="effects" id="effects">
+    <div class="effects" id="effects" tabindex="-1">
       ${effects.map(entry => `
         <section class="effect-section" id="${entry.id}" aria-labelledby="${entry.id}-title">
           <div class="effect-viewport">
@@ -37,9 +39,9 @@ const scenes = effects.map(entry => {
 });
 let frame = 0;
 let disposed = false;
+let smoothScroll: Lenis | undefined;
 
 function render() {
-  frame = 0;
   if (disposed) return;
   const scroll = window.scrollY;
   let current = scenes[0];
@@ -56,7 +58,50 @@ function render() {
 }
 
 function scheduleRender() {
-  if (!frame && !disposed) frame = requestAnimationFrame(render);
+  // Lenis emits after updating native scroll; render in that same frame.
+  if (smoothScroll) return;
+  if (!frame && !disposed) frame = requestAnimationFrame(() => {
+    frame = 0;
+    render();
+  });
+}
+
+function syncSmoothScroll() {
+  cancelAnimationFrame(frame);
+  frame = 0;
+  smoothScroll?.destroy();
+  smoothScroll = undefined;
+  if (!motionPreference.matches) {
+    smoothScroll = new Lenis({
+      lerp: .1,
+      smoothWheel: true,
+      syncTouch: false,
+      autoRaf: true,
+    });
+    smoothScroll.on('scroll', render);
+  }
+}
+
+function onAnchorClick(event: MouseEvent) {
+  if (!smoothScroll || event.defaultPrevented || event.button !== 0
+    || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  const link = event.target instanceof Element
+    ? event.target.closest<HTMLAnchorElement>('a[href^="#"]') : null;
+  if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+  const target = document.getElementById(link.hash.slice(1));
+  if (!target) return;
+  event.preventDefault();
+  if (location.hash !== link.hash) history.pushState(null, '', link.hash);
+  smoothScroll.scrollTo(target, {
+    onComplete: () => {
+      if (link.classList.contains('skip-link')) target.focus({ preventScroll: true });
+    },
+  });
+}
+
+function onHashChange() {
+  const target = document.getElementById(location.hash.slice(1));
+  if (target) smoothScroll?.scrollTo(target, { immediate: true });
 }
 
 function measure() {
@@ -74,20 +119,25 @@ function measure() {
   for (const scene of scenes) {
     scene.start = scene.section.getBoundingClientRect().top + window.scrollY - headerHeight;
   }
-  scheduleRender();
+  smoothScroll?.resize();
+  render();
 }
 
 function onMotionPreferenceChange() {
   // The reusable effect follows the same system preference independently.
+  syncSmoothScroll();
   measure();
 }
 
 window.addEventListener('scroll', scheduleRender, { passive: true });
 window.addEventListener('resize', measure);
 window.addEventListener('pageshow', measure);
+window.addEventListener('hashchange', onHashChange);
+app.addEventListener('click', onAnchorClick);
 motionPreference.addEventListener('change', onMotionPreferenceChange);
 document.fonts.addEventListener('loadingdone', measure);
 void document.fonts.ready.then(measure);
+syncSmoothScroll();
 measure();
 
 // Preserve old shared links to the first effect.
@@ -99,9 +149,12 @@ if (['#effect', '#collection'].includes(location.hash)) {
 if (import.meta.hot) import.meta.hot.dispose(() => {
   disposed = true;
   cancelAnimationFrame(frame);
+  smoothScroll?.destroy();
   window.removeEventListener('scroll', scheduleRender);
   window.removeEventListener('resize', measure);
   window.removeEventListener('pageshow', measure);
+  window.removeEventListener('hashchange', onHashChange);
+  app.removeEventListener('click', onAnchorClick);
   motionPreference.removeEventListener('change', onMotionPreferenceChange);
   document.fonts.removeEventListener('loadingdone', measure);
   scenes.forEach(scene => scene.effect.destroy());
