@@ -6,6 +6,76 @@ const { clampPosition, sampleFilmCard, projectFilmRelease } = await loadTypeScri
   new URL('../effects/film-cards/model.ts', import.meta.url),
 );
 
+// Frozen pre-optimization geometry. Keep independent of the model's constants
+// so rendering optimizations cannot silently alter the approved motion.
+function previousFilmPose(index, position, width) {
+  const distance = index - position;
+  const absolute = Math.abs(distance);
+  const side = Math.sign(distance);
+  const travel = Math.min(absolute, 1);
+  const offset = absolute * .27 + (.82 - .27) * Math.sin(travel * Math.PI / 2);
+  return {
+    x: side * width * offset,
+    z: -width * travel * .6,
+    rotationY: -side * travel * 60,
+    scale: 1,
+    shade: travel * .18,
+    zIndex: 1000 - Math.round(absolute * 100),
+  };
+}
+
+test('optimized poses preserve the previous formula exactly across dense scroll positions', () => {
+  for (const width of [80, 230, 414, 560.25]) {
+    for (const index of [0, 3, 6]) {
+      for (let tick = -2000; tick <= 8000; tick++) {
+        const position = tick / 1000;
+        assert.deepEqual(sampleFilmCard(index, position, width), previousFilmPose(index, position, width));
+      }
+    }
+  }
+  for (const distance of [0, -0, .5, -.5, 1 - Number.EPSILON, 1, 1 + Number.EPSILON, -1, -2, 2]) {
+    for (const width of [0, -0, 414]) {
+      assert.deepEqual(sampleFilmCard(distance, 0, width), previousFilmPose(distance, 0, width));
+    }
+  }
+});
+
+test('one output pose can be reused across both sides, the center, resizes and reverse seeks', () => {
+  const output = { x: NaN, z: NaN, rotationY: NaN, scale: NaN, shade: NaN, zIndex: NaN };
+  const positions = [-2, 0, 2, 2.125, 2.5, 2.999, 3, 3.001, 3.5, 3.875, 4, 6, 8];
+  for (const width of [414, 80, 560.25]) {
+    for (const position of [...positions, ...positions.toReversed()]) {
+      const result = sampleFilmCard(3, position, width, output);
+      assert.equal(result, output, 'the provided object is returned, not replaced');
+      assert.deepEqual(result, previousFilmPose(3, position, width));
+    }
+  }
+  // Fields that are currently constant must also overwrite a stale caller value.
+  for (const key of Object.keys(output)) output[key] = -12345;
+  assert.equal(sampleFilmCard(3, 3, 414, output), output);
+  assert.deepEqual(output, previousFilmPose(3, 3, 414));
+  const first = sampleFilmCard(3, 3, 414);
+  const second = sampleFilmCard(3, 3, 414);
+  assert.notEqual(first, second, 'the original three-argument API still returns a fresh object');
+  assert.notEqual(first, output);
+});
+
+test('a deck evaluates sine only for its two moving central cards', () => {
+  const originalSine = Math.sin;
+  let sineCalls = 0;
+  Math.sin = value => { sineCalls++; return originalSine(value); };
+  try {
+    const output = sampleFilmCard(0, 0, 414);
+    for (const position of [0, .01, .5, 1, 3.333, 7.5, 10]) {
+      sineCalls = 0;
+      for (let index = 0; index < 11; index++) sampleFilmCard(index, position, 414, output);
+      assert.equal(sineCalls, Number.isInteger(position) ? 0 : 2);
+    }
+  } finally {
+    Math.sin = originalSine;
+  }
+});
+
 function projectedHorizontalBounds(pose, width) {
   const perspective = width * 1.65;
   const angle = pose.rotationY * Math.PI / 180;

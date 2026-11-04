@@ -46,7 +46,9 @@ export function createFilmCards(host: HTMLElement, options: FilmCardsOptions): F
   let destination = Math.round(state.position);
   let reduced = false;
   let disposed = false;
-  let animation: gsap.core.Tween | undefined;
+  let renderedPosition = NaN;
+  let renderedWidth = NaN;
+  let renderedReduced = false;
   let suppressedUntil = 0;
   let gesture: { id: number; x: number; y: number; start: number; lastX: number; time: number; velocity: number; dragging: boolean } | undefined;
 
@@ -122,19 +124,46 @@ export function createFilmCards(host: HTMLElement, options: FilmCardsOptions): F
     label.textContent = card.title;
     cue.append(number, label);
     cues.append(cue);
-    return { element, shade, cue };
+    return {
+      element, cue, style: element.style,
+      pose: sampleFilmCard(index, state.position, width),
+      setShade: gsap.quickSetter(shade, 'opacity'),
+      setLayer: gsap.quickSetter(element, 'zIndex'),
+      lastShade: NaN,
+      lastLayer: NaN,
+    };
   });
   cues.style.setProperty('--film-count', String(cards.length));
+  const animatePosition = gsap.quickTo(state, 'position', {
+    duration: .7, ease: selectionEase, onUpdate: render,
+  });
 
   function render() {
     if (disposed) return;
+    if (state.position === renderedPosition && width === renderedWidth && reduced === renderedReduced) return;
+    renderedPosition = state.position;
+    renderedWidth = width;
+    renderedReduced = reduced;
     const selected = Math.round(clampPosition(state.position, cards.length));
-    root.dataset.position = state.position.toFixed(4);
-    if (!reduced) rows.forEach(({ element, shade }, index) => {
-      const pose = sampleFilmCard(index, state.position, width);
-      gsap.set(element, { x: pose.x, z: pose.z, rotationY: pose.rotationY, scale: pose.scale, zIndex: pose.zIndex });
-      shade.style.opacity = String(pose.shade);
-    });
+    const positionLabel = state.position.toFixed(4);
+    if (root.dataset.position !== positionLabel) root.dataset.position = positionLabel;
+    if (!reduced) {
+      for (let index = 0; index < rows.length; index++) {
+        const row = rows[index]!;
+        const pose = sampleFilmCard(index, state.position, width, row.pose);
+        // GSAP drives the shared position; commit its derived axes together
+        // in one style write. Scale stays 1: perspective handles size change.
+        row.style.transform = `translate3d(${pose.x}px,0,${pose.z}px) rotateY(${pose.rotationY}deg)`;
+        if (pose.shade !== row.lastShade) {
+          row.setShade(pose.shade);
+          row.lastShade = pose.shade;
+        }
+        if (pose.zIndex !== row.lastLayer) {
+          row.setLayer(pose.zIndex);
+          row.lastLayer = pose.zIndex;
+        }
+      }
+    }
     if (selected !== active) {
       active = selected;
       root.dataset.activeIndex = String(active);
@@ -154,16 +183,15 @@ export function createFilmCards(host: HTMLElement, options: FilmCardsOptions): F
     if (disposed) return;
     const next = Math.round(clampPosition(index, cards.length));
     destination = next;
-    animation?.kill();
+    animatePosition.tween.pause();
     if (!animate || reduced) {
       state.position = next;
       render();
       return;
     }
-    animation = gsap.to(state, {
-      position: next, duration: .7, ease: selectionEase, overwrite: true,
-      onUpdate: render,
-    });
+    // Drag and scroll can change state outside the tween. Restart from that
+    // exact position instead of quickTo's previously cached tween position.
+    animatePosition(next, state.position);
   }
 
   function endGesture(cancelled = false) {
@@ -183,14 +211,16 @@ export function createFilmCards(host: HTMLElement, options: FilmCardsOptions): F
     const nextReduced = options.reducedMotion ?? preference.matches;
     if (nextReduced !== reduced) {
       endGesture(true);
-      animation?.kill();
+      animatePosition.tween.pause();
       reduced = nextReduced;
       root.dataset.reduced = String(reduced);
       if (reduced) {
         state.position = destination;
-        rows.forEach(({ element, shade }) => {
-          gsap.set(element, { clearProps: 'transform,zIndex' });
-          shade.style.opacity = '0';
+        rows.forEach(row => {
+          row.style.removeProperty('transform');
+          row.setLayer('');
+          row.setShade(0);
+          row.lastLayer = row.lastShade = NaN;
         });
       }
       else if (mode === 'scroll') state.position = progress * (cards.length - 1);
@@ -213,7 +243,7 @@ export function createFilmCards(host: HTMLElement, options: FilmCardsOptions): F
   if (mode === 'drag') {
     stage.addEventListener('pointerdown', event => {
       if (reduced || !event.isPrimary || event.button !== 0) return;
-      animation?.kill();
+      animatePosition.tween.pause();
       destination = Math.round(state.position);
       gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, start: state.position,
         lastX: event.clientX, time: view.performance.now(), velocity: 0, dragging: false };
@@ -271,7 +301,7 @@ export function createFilmCards(host: HTMLElement, options: FilmCardsOptions): F
       const next = clampPosition(value, 2);
       if (next === progress && state.position === next * (cards.length - 1)) return;
       progress = next;
-      animation?.kill();
+      animatePosition.tween.pause();
       state.position = progress * (cards.length - 1);
       render();
     },
@@ -281,7 +311,7 @@ export function createFilmCards(host: HTMLElement, options: FilmCardsOptions): F
       if (disposed) return;
       endGesture(true);
       disposed = true;
-      animation?.kill();
+      animatePosition.tween.kill();
       events.abort();
       observer.disconnect();
       root.remove();
