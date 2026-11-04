@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, cpSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { copyDirectory } from './file-tree.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -20,7 +21,7 @@ if (git(root, 'ls-remote', 'origin', 'refs/heads/gh-pages')) {
   git(staging, 'checkout', '-B', 'gh-pages', 'FETCH_HEAD');
   git(staging, 'rm', '-r', '--ignore-unmatch', '.');
 }
-cpSync(join(root, 'dist'), staging, { recursive: true });
+copyDirectory(join(root, 'dist'), staging);
 writeFileSync(join(staging, '.nojekyll'), '');
 writeFileSync(join(staging, 'deployment.json'), JSON.stringify({ sourceCommit }, null, 2));
 git(staging, 'add', '.');
