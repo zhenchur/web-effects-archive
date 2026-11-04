@@ -18,7 +18,7 @@ app.innerHTML = `
     </nav>
     <div class="effects" id="effects" tabindex="-1">
       ${effects.map(entry => `
-        <section class="effect-section" id="${entry.id}" aria-labelledby="${entry.id}-title">
+        <section class="effect-section${entry.steps === 0 ? ' effect-section--static' : ''}" id="${entry.id}" aria-labelledby="${entry.id}-title">
           <div class="effect-viewport">
             <h2 id="${entry.id}-title">${entry.title}</h2>
             <div class="effect-host"></div>
@@ -29,7 +29,6 @@ app.innerHTML = `
   </main>
 `;
 
-const header = app.querySelector<HTMLElement>('.site-header')!;
 const scenes = effects.map(entry => {
   const section = document.getElementById(entry.id)!;
   const viewport = section.querySelector<HTMLElement>('.effect-viewport')!;
@@ -47,14 +46,15 @@ function render() {
   let current = scenes[0];
   for (const scene of scenes) {
     if (scroll >= scene.start - 1) current = scene;
-    if (!motionPreference.matches) {
-      scene.effect.setProgress(Math.max(0, Math.min(1, (scroll - scene.start) / scene.travel)));
+    if (!motionPreference.matches && scene.travel > 0) {
+      scene.effect.setProgress?.(Math.max(0, Math.min(1, (scroll - scene.start) / scene.travel)));
     }
   }
   for (const scene of scenes) {
     if (scene === current) scene.link.setAttribute('aria-current', 'location');
     else scene.link.removeAttribute('aria-current');
   }
+  if (current && app.dataset.activeEffect !== current.entry.id) app.dataset.activeEffect = current.entry.id;
 }
 
 function scheduleRender() {
@@ -108,16 +108,21 @@ function measure() {
   if (disposed) return;
   // Let the last word settle before the next effect enters the viewport.
   const step = Math.max(300, window.innerHeight * .9);
-  const headerHeight = header.offsetHeight;
   for (const scene of scenes) {
-    scene.travel = step * Math.max(1, scene.entry.steps);
-    scene.section.style.height = motionPreference.matches
+    const pinnedTop = parseFloat(getComputedStyle(scene.viewport).top) || 0;
+    scene.travel = step * Math.max(0, scene.entry.steps);
+    scene.section.style.height = motionPreference.matches || scene.travel === 0
       ? 'auto'
       : `${scene.viewport.offsetHeight + scene.travel + step * .4}px`;
-    scene.effect.refresh();
+    // Host-local coordinate of the browser viewport centre while the scene sticks.
+    scene.host.style.setProperty('--effect-focus-y', `${window.innerHeight / 2 - pinnedTop - scene.host.offsetTop}px`);
+    scene.effect.refresh?.();
   }
   for (const scene of scenes) {
-    scene.start = scene.section.getBoundingClientRect().top + window.scrollY - headerHeight;
+    const pinnedTop = scene.entry.steps === 0
+      ? parseFloat(getComputedStyle(scene.section).scrollMarginTop) || 0
+      : parseFloat(getComputedStyle(scene.viewport).top) || 0;
+    scene.start = scene.section.getBoundingClientRect().top + window.scrollY - pinnedTop;
   }
   smoothScroll?.resize();
   render();

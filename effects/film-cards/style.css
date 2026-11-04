@@ -1,0 +1,85 @@
+.film-gallery {
+  --film-card-width: 400px;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #101211;
+  color: #eeeee7;
+  font: 400 14px/1.4 Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.film-gallery--drag { height: clamp(400px, calc(100svh - 180px), 780px); }
+.film-gallery *, .film-gallery *::before, .film-gallery *::after { box-sizing: border-box; }
+.film-stage { position: relative; flex: 1; min-height: 0; outline-offset: -5px; }
+.film-gallery--drag .film-stage { cursor: grab; touch-action: pan-y pinch-zoom; user-select: none; }
+.film-gallery[data-dragging] .film-stage, .film-gallery[data-dragging] .film-card { cursor: grabbing; }
+.film-deck { position: absolute; inset: 0; perspective: 1500px; transform-style: preserve-3d; }
+.film-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--film-card-width);
+  aspect-ratio: 16 / 10;
+  margin: calc(var(--film-card-width) * -.3125) 0 0 calc(var(--film-card-width) * -.5);
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: #252923;
+  color: inherit;
+  overflow: hidden;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  will-change: transform;
+  box-shadow: 0 16px 36px #0004;
+}
+button.film-card { cursor: pointer; }
+.film-card img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.film-shade { position: absolute; inset: 0; background: #050a08; pointer-events: none; }
+.film-static-title { display: none; }
+.film-footer { flex: none; padding: 0 clamp(20px, 4%, 48px) 26px; }
+.film-caption { display: grid; grid-template-columns: 1fr auto; gap: 3px 16px; margin-bottom: 25px; }
+.film-title { font-size: clamp(21px, 2.4vw, 32px); letter-spacing: -.04em; line-height: 1.15; }
+.film-subtitle { grid-column: 1; color: #a3aaa1; font-size: 11px; }
+.film-count { grid-column: 2; grid-row: 1 / 3; align-self: center; font: 11px/1 monospace; color: #a3aaa1; }
+.film-cues { display: grid; grid-template-columns: repeat(var(--film-count), minmax(0, 1fr)); }
+.film-cue {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+  padding: 14px 6px 4px 0;
+  border: 0;
+  border-top: 1px solid #ffffff26;
+  background: none;
+  color: #a3aaa1;
+  font: inherit;
+  text-align: left;
+}
+button.film-cue { cursor: pointer; }
+.film-cue-number { flex: none; font: 10px/1.5 monospace; }
+.film-cue-label { font-size: 10px; line-height: 1.5; }
+.film-cue[aria-current] { color: #e5efcf; border-top-color: #d5e8ae; }
+.film-cue[aria-current] .film-cue-number { color: #d5e8ae; }
+.film-cue:focus-visible, .film-stage:focus-visible, .film-card:focus-visible { outline: 2px solid #d5e8ae; outline-offset: -3px; }
+@media (hover: hover) { button.film-cue:hover { color: #fff; border-top-color: #fff; } }
+@media (max-width: 600px) {
+  .film-gallery--drag { height: clamp(380px, 65svh, 620px); }
+  .film-footer { padding: 0 20px 22px; }
+  .film-caption { margin-bottom: 20px; }
+  .film-cue { justify-content: center; padding: 13px 0 7px; }
+  .film-cue-label { display: none; }
+  .film-cue-number { font-size: 11px; }
+}
+.film-gallery[data-reduced="true"] { height: auto; overflow: visible; }
+.film-gallery[data-reduced="true"] .film-stage { cursor: auto; touch-action: auto; padding: 20px; }
+.film-gallery[data-reduced="true"] .film-deck { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 20px; perspective: none; }
+.film-gallery[data-reduced="true"] .film-card { position: relative; inset: auto; width: 100%; margin: 0; aspect-ratio: auto; box-shadow: none; will-change: auto; }
+.film-gallery[data-reduced="true"] .film-card img { height: auto; aspect-ratio: 16 / 10; }
+.film-gallery[data-reduced="true"] .film-shade, .film-gallery[data-reduced="true"] .film-footer { display: none; }
+.film-gallery[data-reduced="true"] .film-static-title { display: block; padding: 12px; font: 14px/1.4 Arial, sans-serif; text-align: left; }

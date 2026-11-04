@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Film Cards — два варианта</title>
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 16px/1.5 Arial, sans-serif; background: white; color: #161616; }
+    main { max-width: 1400px; margin: auto; padding: 0 24px; }
+    h1 { margin: 0; padding: 24px 0; font-size: 20px; font-weight: 400; }
+    .viewport { position: sticky; top: 0; height: 100svh; display: flex; flex-direction: column; padding-bottom: 24px; }
+    .host { flex: 1; min-height: 0; }
+    #drag { padding-bottom: 72px; }
+    #drag .host { height: auto; }
+    @media(prefers-reduced-motion: reduce) {
+      #scroll { height: auto !important; }
+      .viewport { position: static; height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section id="drag"><h1>Эффект 1</h1><div class="host"></div></section>
+    <section id="scroll"><div class="viewport"><h1>Эффект 2</h1><div class="host"></div></div></section>
+  </main>
+  <script type="module">
+    import { createFilmCards, FILM_CARDS } from './film-cards.js';
+    const drag = createFilmCards(document.querySelector('#drag .host'), {
+      cards: FILM_CARDS, mode: 'drag', initialIndex: 3,
+    });
+    const scroll = createFilmCards(document.querySelector('#scroll .host'), {
+      cards: FILM_CARDS, mode: 'scroll',
+    });
+    const section = document.querySelector('#scroll');
+    const viewport = section.querySelector('.viewport');
+    const preference = matchMedia('(prefers-reduced-motion: reduce)');
+    let start = 0, travel = 1, frame = 0;
+    function render() {
+      frame = 0;
+      if (!preference.matches) scroll.setProgress((window.scrollY - start) / travel);
+    }
+    function measure() {
+      travel = Math.max(300, innerHeight * .65) * (FILM_CARDS.length - 1);
+      section.style.height = preference.matches ? 'auto' : `${viewport.offsetHeight + travel}px`;
+      start = section.getBoundingClientRect().top + window.scrollY;
+      drag.refresh(); scroll.refresh(); render();
+    }
+    addEventListener('scroll', () => { if (!frame) frame = requestAnimationFrame(render); }, { passive: true });
+    addEventListener('resize', measure);
+    addEventListener('pageshow', measure);
+    preference.addEventListener('change', measure);
+    document.fonts.ready.then(measure);
+    measure();
+  </script>
+</body>
+</html>

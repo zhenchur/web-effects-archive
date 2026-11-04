@@ -4,3 +4,5 @@ qa/
 public/downloads/
 *.log
 .DS_Store
+.local/
+.env.local
