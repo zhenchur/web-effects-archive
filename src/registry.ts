@@ -1,7 +1,5 @@
 import { createCinemaLetters, DEFAULT_WORDS } from '../effects/cinema-letters';
 import '../effects/cinema-letters/style.css';
-import { createFreshContent, FRESH_CONTENT_LINES } from '../effects/fresh-content';
-import '../effects/fresh-content/style.css';
 import { createFilmCards, FILM_CARDS } from '../effects/film-cards';
 import '../effects/film-cards/style.css';
 
@@ -19,7 +17,6 @@ export interface ArchiveEntry {
 }
 
 export const repositoryUrl = 'https://github.com/zhenchur/web-effects-archive';
-const freshContentRepetitions = 3;
 
 // Each entry adds its navigation link and a scene in the document's scroll flow.
 export const effects: readonly ArchiveEntry[] = [
@@ -28,12 +25,6 @@ export const effects: readonly ArchiveEntry[] = [
     title: 'Эффект 1',
     steps: DEFAULT_WORDS.length - 1,
     create: host => createCinemaLetters(host),
-  },
-  {
-    id: 'fresh-content',
-    title: 'Эффект 2',
-    steps: (FRESH_CONTENT_LINES.length * freshContentRepetitions - 1) * .3,
-    create: host => createFreshContent(host, { repetitions: freshContentRepetitions }),
   },
   {
     id: 'film-cards-drag',

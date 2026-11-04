@@ -1,5 +1,5 @@
 import { build } from 'vite';
-import { readFile, readdir, mkdir, writeFile, copyFile } from 'node:fs/promises';
+import { readFile, readdir, mkdir, writeFile, copyFile, unlink } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { deflateRawSync } from 'node:zlib';
 
@@ -7,7 +7,6 @@ const root = resolve(import.meta.dirname, '..');
 const output = join(root, 'public/downloads');
 const effects = [
   { id: 'cinema-letters', title: 'Cinema Letters', dependencies: { gsap: '3.15.0' }, thirdParty: true },
-  { id: 'fresh-content', title: 'Fresh Content', dependencies: { gsap: '3.15.0' }, thirdParty: true },
   { id: 'film-cards', title: 'Film Cards — drag and scroll', dependencies: { gsap: '3.15.0' }, thirdParty: true },
 ];
 
@@ -50,6 +49,14 @@ function createZip(id, files) {
 }
 
 await mkdir(output, { recursive: true });
+// Removed modules must not survive in downloads when Vite copies public/ to dist/.
+const activeIds = new Set(effects.map(({ id }) => id));
+for (const entry of await readdir(output, { withFileTypes: true })) {
+  const generated = /^(.*)\.(?:zip|js|css)$/.exec(entry.name);
+  if (entry.isFile() && generated && !activeIds.has(generated[1])) {
+    await unlink(join(output, entry.name));
+  }
+}
 for (const { id, title, dependencies, thirdParty } of effects) {
   const effect = join(root, 'effects', id);
   const result = await build({
@@ -62,7 +69,7 @@ for (const { id, title, dependencies, thirdParty } of effects) {
   for (const name of (await readdir(effect)).sort()) {
     // Package editable source only; local font files never enter a download.
     if (!/\.(?:ts|css|md)$/.test(name)) continue;
-    files.push({ name: ['README.md', 'ASSETS.md'].includes(name) ? name : `effects/${id}/${name}`, bytes: await readFile(join(effect, name)) });
+    files.push({ name: ['README.md', 'ASSETS.md', 'MOTION.md'].includes(name) ? name : `effects/${id}/${name}`, bytes: await readFile(join(effect, name)) });
   }
   // Only the explicitly public sample images are included. Fonts and local previews stay excluded.
   const assetFolder = join(effect, 'assets');

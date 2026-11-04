@@ -4,7 +4,7 @@ export default defineConfig(({ mode }) => {
   const { LOCAL_PREVIEW_STYLE_URL } = loadEnv(mode, '.', 'LOCAL_');
   return {
     base: '/web-effects-archive/',
-    build: { target: 'es2022' },
+    build: { target: 'es2022', emptyOutDir: true },
     // Optional, ignored local styles can load licensed fonts for design review.
     // This plugin runs only in development; private assets never enter the build.
     plugins: LOCAL_PREVIEW_STYLE_URL ? [{

@@ -44,6 +44,44 @@ test('scroll poses are reversible, ordered, bounded and continuous at the fold',
   assert.ok(Math.abs(before.rotationY - after.rotationY) < .001);
 });
 
+test('departing cards match the observed turn at measured reference displacements', () => {
+  // Approximate world-space displacement and turn reconstructed from four
+  // frames of the public Motion Gallery Film preview, not model coefficients.
+  const reference = [
+    { xRatio: -.235, turn: 10.4 },
+    { xRatio: -.54, turn: 30.1 },
+    { xRatio: -.732, turn: 49.5 },
+    { xRatio: -.799, turn: 58.2 },
+  ];
+  for (const width of [230, 560]) {
+    for (const { xRatio, turn } of reference) {
+      // One selected-to-side transition spans .82 card widths in the preview.
+      const position = -xRatio / .82;
+      const pose = sampleFilmCard(0, position, width);
+      assert.ok(Math.abs(Math.abs(pose.rotationY) - turn) <= 4,
+        `at x/width=${xRatio}, expected turn near ${turn}°, received ${pose.rotationY}°`);
+    }
+  }
+});
+
+test('folded cards slide along either side row without further turning or receding', () => {
+  for (const direction of [-1, 1]) {
+    const positions = [1, 1.25, 1.8, 2.5, 3].map(distance => 3 + direction * distance);
+    const poses = positions.map(position => sampleFilmCard(3, position, 500));
+    for (let index = 1; index < poses.length; index++) {
+      for (const key of ['z', 'scale', 'rotationY', 'shade']) {
+        assert.equal(poses[index][key], poses[0][key], `${key} stays fixed in the side row`);
+      }
+      assert.ok(direction * (poses[index].x - poses[index - 1].x) < 0,
+        'each later frame moves farther along the row');
+    }
+    for (let index = positions.length - 1; index >= 0; index--) {
+      assert.deepEqual(sampleFilmCard(3, positions[index], 500), poses[index],
+        'returning along the row restores the same pose');
+    }
+  }
+});
+
 test('release handles flick direction, stale velocity, edges and a one-card deck', () => {
   assert.equal(projectFilmRelease(2.1, .004, 7), 3);
   assert.equal(projectFilmRelease(2.9, -.004, 7), 2);

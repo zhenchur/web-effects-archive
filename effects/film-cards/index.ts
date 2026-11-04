@@ -1,5 +1,9 @@
 import { gsap } from 'gsap';
-import { clampPosition, projectFilmRelease, sampleFilmCard } from './model';
+import { CustomEase } from 'gsap/CustomEase';
+import { clampPosition, FILM_CENTER_SPACING, projectFilmRelease, sampleFilmCard } from './model';
+
+gsap.registerPlugin(CustomEase);
+const selectionEase = CustomEase.create('film-cards-selection', '.22,0,.23,1');
 
 export { FILM_CARDS } from './demo-cards';
 
@@ -157,7 +161,7 @@ export function createFilmCards(host: HTMLElement, options: FilmCardsOptions): F
       return;
     }
     animation = gsap.to(state, {
-      position: next, duration: .65, ease: 'power3.out', overwrite: true,
+      position: next, duration: .7, ease: selectionEase, overwrite: true,
       onUpdate: render,
     });
   }
@@ -182,16 +186,26 @@ export function createFilmCards(host: HTMLElement, options: FilmCardsOptions): F
       animation?.kill();
       reduced = nextReduced;
       root.dataset.reduced = String(reduced);
-      if (reduced) rows.forEach(({ element, shade }) => {
-        gsap.set(element, { clearProps: 'transform,zIndex' });
-        shade.style.opacity = '0';
-      });
+      if (reduced) {
+        state.position = destination;
+        rows.forEach(({ element, shade }) => {
+          gsap.set(element, { clearProps: 'transform,zIndex' });
+          shade.style.opacity = '0';
+        });
+      }
       else if (mode === 'scroll') state.position = progress * (cards.length - 1);
     }
     if (!reduced) {
-      const widthRatio = stage.clientWidth < 600 ? .8 : .64;
-      width = Math.max(80, Math.min(560, stage.clientWidth * widthRatio, stage.clientHeight * 1.18));
+      const widthRatio = stage.clientWidth < 600 ? .8 : .43;
+      const nextWidth = Math.max(80, Math.min(640, stage.clientWidth * widthRatio, stage.clientHeight * 1.9));
+      if (gesture?.dragging && nextWidth !== width) {
+        gesture.start = state.position;
+        gesture.x = gesture.lastX;
+        gesture.velocity = 0;
+      }
+      width = nextWidth;
       root.style.setProperty('--film-card-width', `${width}px`);
+      root.style.setProperty('--film-perspective', `${width * 1.65}px`);
     }
     render();
   }
@@ -216,7 +230,7 @@ export function createFilmCards(host: HTMLElement, options: FilmCardsOptions): F
         root.dataset.dragging = 'true';
       }
       const now = view.performance.now();
-      const pitch = width * .74;
+      const pitch = width * FILM_CENTER_SPACING;
       const speed = -(event.clientX - gesture.lastX) / pitch / Math.max(1, now - gesture.time);
       gesture.velocity = gesture.velocity * .35 + speed * .65;
       gesture.time = now;

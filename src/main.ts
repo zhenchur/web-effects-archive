@@ -54,7 +54,6 @@ function render() {
     if (scene === current) scene.link.setAttribute('aria-current', 'location');
     else scene.link.removeAttribute('aria-current');
   }
-  if (current && app.dataset.activeEffect !== current.entry.id) app.dataset.activeEffect = current.entry.id;
 }
 
 function scheduleRender() {
@@ -109,13 +108,10 @@ function measure() {
   // Let the last word settle before the next effect enters the viewport.
   const step = Math.max(300, window.innerHeight * .9);
   for (const scene of scenes) {
-    const pinnedTop = parseFloat(getComputedStyle(scene.viewport).top) || 0;
     scene.travel = step * Math.max(0, scene.entry.steps);
     scene.section.style.height = motionPreference.matches || scene.travel === 0
       ? 'auto'
       : `${scene.viewport.offsetHeight + scene.travel + step * .4}px`;
-    // Host-local coordinate of the browser viewport centre while the scene sticks.
-    scene.host.style.setProperty('--effect-focus-y', `${window.innerHeight / 2 - pinnedTop - scene.host.offsetTop}px`);
     scene.effect.refresh?.();
   }
   for (const scene of scenes) {

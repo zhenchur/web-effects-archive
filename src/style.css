@@ -62,8 +62,6 @@ a:focus-visible { outline: 2px solid currentColor; outline-offset: 6px; }
   font-family: Arial, Helvetica, sans-serif;
   --cl-font-size: clamp(48px, 10vw, 160px);
   --cl-font-weight: 600;
-  --fc-font-size: var(--cl-font-size);
-  --fc-focus-y: var(--effect-focus-y);
   font-size: var(--cl-font-size);
 }
 .effect-section--static .effect-viewport {
@@ -76,19 +74,6 @@ a:focus-visible { outline: 2px solid currentColor; outline-offset: 6px; }
   flex: none;
   height: auto;
   padding: 0;
-}
-@media (prefers-reduced-motion: no-preference) {
-  /* Let the drum reach the browser edges behind the surrounding archive labels. */
-  #app[data-active-effect="fresh-content"] .site-header { background: transparent; }
-  #fresh-content { scroll-margin-top: 0; }
-  #fresh-content .effect-viewport { top: 0; height: 100svh; height: 100dvh; }
-  #fresh-content .effect-viewport h2 {
-    position: absolute;
-    top: var(--header-height);
-    left: 0;
-    z-index: 1;
-    pointer-events: none;
-  }
 }
 @media (max-width: 1100px) {
   .archive { grid-template-columns: 120px minmax(0, 1fr); gap: 32px; }
