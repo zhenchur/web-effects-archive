@@ -1,5 +1,6 @@
 /** Coverflow geometry, independent of the DOM and the archive's scroll driver. */
 export const FILM_CENTER_SPACING = .82;
+const FILM_SIDE_SPACING = .27;
 
 export function clampPosition(value: number, count: number): number {
   return Math.max(0, Math.min(Math.max(0, count - 1), Number.isNaN(value) ? 0 : value));
@@ -10,12 +11,16 @@ export function sampleFilmCard(index: number, position: number, width: number) {
   const absolute = Math.abs(distance);
   const side = Math.sign(distance);
   const travel = Math.min(absolute, 1);
-  // The reference translates immediately; its turn catches up as the card
-  // joins the side row. This is a spatial curve, not a time delay.
-  const fold = travel ** 1.6;
-  const tail = Math.max(0, absolute - 1);
+  // The two central cards share a linear turn, keeping their combined angle
+  // near 60 degrees. A slower incoming unfold preserves room between them.
+  const fold = travel;
+  // Center spacing must open up during a handoff: linear X lets the projected
+  // faces intersect. This width-relative curve matches the measured edge gap
+  // and joins the side row with the same horizontal speed at travel = 1.
+  const offset = absolute * FILM_SIDE_SPACING
+    + (FILM_CENTER_SPACING - FILM_SIDE_SPACING) * Math.sin(travel * Math.PI / 2);
   return {
-    x: side * width * (travel * FILM_CENTER_SPACING + tail * .27),
+    x: side * width * offset,
     z: -width * fold * .6,
     rotationY: -side * fold * 60,
     // Perspective already makes side cards smaller. Once folded, they only

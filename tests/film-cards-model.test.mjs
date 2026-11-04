@@ -6,6 +6,21 @@ const { clampPosition, sampleFilmCard, projectFilmRelease } = await loadTypeScri
   new URL('../effects/film-cards/model.ts', import.meta.url),
 );
 
+function projectedHorizontalBounds(pose, width) {
+  const perspective = width * 1.65;
+  const angle = pose.rotationY * Math.PI / 180;
+  const edges = [-width * pose.scale / 2, width * pose.scale / 2].map(localX =>
+    perspective * (pose.x + localX * Math.cos(angle))
+      / (perspective - pose.z + localX * Math.sin(angle)));
+  return { left: Math.min(...edges), right: Math.max(...edges) };
+}
+
+function projectedPairGap(outgoing, incoming, width, direction) {
+  const outBounds = projectedHorizontalBounds(outgoing, width);
+  const inBounds = projectedHorizontalBounds(incoming, width);
+  return direction === 1 ? inBounds.left - outBounds.right : outBounds.left - inBounds.right;
+}
+
 test('every card becomes front-facing and full-sized at its selected index', () => {
   for (const width of [80, 230, 560]) {
     for (let index = 0; index < 7; index++) {
@@ -44,22 +59,72 @@ test('scroll poses are reversible, ordered, bounded and continuous at the fold',
   assert.ok(Math.abs(before.rotationY - after.rotationY) < .001);
 });
 
-test('departing cards match the observed turn at measured reference displacements', () => {
-  // Approximate world-space displacement and turn reconstructed from four
-  // frames of the public Motion Gallery Film preview, not model coefficients.
+test('both cards match the measured reference poses at actual outgoing displacements', () => {
+  // Paired-card measurements from the public preview, constrained by the known
+  // perspective (incoming-constrained.csv, frames 27/30/33/34/36/37/39/42).
+  // X is relative to front-facing card width. These are observations, not a
+  // prescribed relationship between X and the model's fractional index.
   const reference = [
-    { xRatio: -.235, turn: 10.4 },
-    { xRatio: -.54, turn: 30.1 },
-    { xRatio: -.732, turn: 49.5 },
-    { xRatio: -.799, turn: 58.2 },
+    { time: .45, outX: -.09373, outTurn: 4, inX: .76900, inTurn: 53.5 },
+    { time: .50, outX: -.19478, outTurn: 8.75, inX: .72433, inTurn: 49.5 },
+    { time: .55, outX: -.32449, outTurn: 15.75, inX: .66670, inTurn: 41.75 },
+    { time: .5667, outX: -.37541, outTurn: 19, inX: .64144, inTurn: 38 },
+    { time: .60, outX: -.48356, outTurn: 26.25, inX: .55635, inTurn: 33.25 },
+    { time: .6167, outX: -.53745, outTurn: 30.5, inX: .50334, inTurn: 28.5 },
+    { time: .65, outX: -.61101, outTurn: 37.5, inX: .41008, inTurn: 23 },
+    { time: .70, outX: -.67761, outTurn: 44, inX: .29644, inTurn: 17.5 },
   ];
-  for (const width of [230, 560]) {
-    for (const { xRatio, turn } of reference) {
-      // One selected-to-side transition spans .82 card widths in the preview.
-      const position = -xRatio / .82;
-      const pose = sampleFilmCard(0, position, width);
-      assert.ok(Math.abs(Math.abs(pose.rotationY) - turn) <= 4,
-        `at x/width=${xRatio}, expected turn near ${turn}°, received ${pose.rotationY}°`);
+  for (const width of [230, 414, 560]) {
+    for (const direction of [-1, 1]) {
+      for (const measured of reference) {
+        // Find the pose by the measured X; do not assume that index is linear
+        // in X or recover it from the angle we are about to verify.
+        let low = 0, high = 1;
+        for (let iteration = 0; iteration < 50; iteration++) {
+          const mid = (low + high) / 2;
+          const pose = sampleFilmCard(3, 3 + direction * mid, width);
+          if (Math.abs(pose.x / width) < Math.abs(measured.outX)) low = mid;
+          else high = mid;
+        }
+        const position = 3 + direction * (low + high) / 2;
+        const outgoing = sampleFilmCard(3, position, width);
+        const incoming = sampleFilmCard(3 + direction, position, width);
+        const context = `reference ${measured.time}s, width ${width}, direction ${direction}`;
+        assert.ok(Math.abs(outgoing.x / width - direction * measured.outX) < 1e-8, context);
+        assert.ok(Math.abs(Math.abs(outgoing.rotationY) - measured.outTurn) <= 4,
+          `${context}: outgoing turn ${outgoing.rotationY}° is near ${measured.outTurn}°`);
+        assert.ok(Math.abs(Math.abs(incoming.rotationY) - measured.inTurn) <= 4,
+          `${context}: incoming turn ${incoming.rotationY}° is near ${measured.inTurn}°`);
+        assert.ok(Math.abs(incoming.x / width - direction * measured.inX) <= .04,
+          `${context}: incoming x/width ${incoming.x / width} is near ${direction * measured.inX}`);
+      }
+    }
+  }
+});
+
+test('central cards open the observed projected gap and return to the overlapping side stack', () => {
+  for (const width of [230, 414, 560]) {
+    for (const direction of [-1, 1]) {
+      const sample = progress => {
+        const position = 3 + direction * progress;
+        const outgoing = sampleFilmCard(3, position, width);
+        const incoming = sampleFilmCard(3 + direction, position, width);
+        return { outgoing, incoming, gap: projectedPairGap(outgoing, incoming, width, direction) };
+      };
+      // The measured gap is about 53px in the 414px-card reference. Compare
+      // projected edges, not transform X or the distance between card centres.
+      const equivalentMidGap = sample(.5).gap * 414 / width;
+      assert.ok(Math.abs(equivalentMidGap - 53) <= 8,
+        `mid-transition gap at reference scale: ${equivalentMidGap}px`);
+      const phases = Array.from({ length: 17 }, (_, index) => .3 + index * .025);
+      const forward = phases.map(sample);
+      for (let index = phases.length - 1; index >= 0; index--) {
+        const backward = sample(phases[index]);
+        assert.ok(backward.gap > 0, `central pair must not overlap at progress ${phases[index]}`);
+        assert.deepEqual(backward, forward[index], 'reverse seeks restore the same projected separation');
+      }
+      assert.ok(sample(0).gap < 0, 'initial side stack retains its reference overlap');
+      assert.ok(sample(1).gap < 0, 'settled side stack retains its reference overlap');
     }
   }
 });
